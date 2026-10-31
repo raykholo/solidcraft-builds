@@ -10,7 +10,6 @@ jobs:
       GH_REPO: ${{ github.repository }}
     steps:
       - run: |
-          gh api repos/$GH_REPO/releases -f tag_name=dbg-a -f target_commitish=main -F prerelease=true || true
-          gh api repos/$GH_REPO/git/refs -f ref=refs/tags/dbg-b -f sha=$GITHUB_SHA || true
-          gh api repos/$GH_REPO/releases -f tag_name=dbg-c -F draft=true || true
+          gh api repos/$GH_REPO/releases -f tag_name=dbg-d -f target_commitish=0776499a2dfc2b9f25d5dd6d46e6861758848b7d -F prerelease=true || true
+          gh api repos/$GH_REPO/releases -f tag_name=dbg-e -f target_commitish=3433186 -F prerelease=true || true
           gh api repos/$GH_REPO --jq .permissions || true
