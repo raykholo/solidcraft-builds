@@ -112,7 +112,7 @@ def main() -> int:
                 print(f"{name}: unchanged since {info.get('tag')} (key {key})")
                 continue
             if attempted(name, key):
-                print(f"{name}: key {key} was already tried by an earlier run; skipping (dispatch with force to retry)")
+                print(f"{name}: key {key} failed in an earlier run; skipping (dispatch with force to retry)")
                 continue
 
         for e in merges:

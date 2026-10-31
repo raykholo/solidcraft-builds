@@ -22,17 +22,6 @@ env:
   SOLIDCRAFT_VERSION: ${{ fromJSON(inputs.spec).version }}
 
 jobs:
-  # Remember that this set of inputs was tried, so a failing build isn't retried every
-  # half hour (plan.py checks for this cache entry; dispatch with force to retry).
-  mark:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "${{ fromJSON(inputs.spec).tag }}" > attempt.txt
-      - uses: actions/cache/save@v4
-        with:
-          path: attempt.txt
-          key: attempt-${{ fromJSON(inputs.spec).channel }}-${{ fromJSON(inputs.spec).key }}
-
   linux:
     name: Linux x86_64
     # The oldest GitHub-hosted image, so the binaries only need glibc >= 2.35 (as upstream).
@@ -196,3 +185,17 @@ jobs:
           printf '%s' "$SPEC" > "$RUNNER_TEMP/spec.json"
           ls -l assets
           python3 scripts/publish.py "$RUNNER_TEMP/spec.json" assets
+
+  # A build that failed records its inputs, so the half-hourly check doesn't retry the same
+  # failing set every time (plan.py looks for this cache entry; dispatch with force to retry).
+  # A cancelled build records nothing.
+  mark:
+    needs: [linux, windows, macos, web, publish]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ fromJSON(inputs.spec).tag }}" > attempt.txt
+      - uses: actions/cache/save@v4
+        with:
+          path: attempt.txt
+          key: attempt-${{ fromJSON(inputs.spec).channel }}-${{ fromJSON(inputs.spec).key }}
