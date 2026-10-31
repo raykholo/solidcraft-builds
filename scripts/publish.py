@@ -98,8 +98,14 @@ def notes(spec: dict, files: list[str], tag: str) -> str:
         out += ["", "Skipped (left out of this build):", ""]
         out += [f"- {describe(m)}: {m.get('reason', m.get('status'))}" for m in skipped]
 
+    if spec.get("failed"):
+        out += ["", "**Not in this build** (the build failed; see the "
+                f"[run log]({spec.get('run_url', '')})): " + ", ".join(spec["failed"]) + "."]
+
     out += ["", "### Downloads", ""]
-    if spec.get("web_note"):
+    if "solidcraft-web.zip" not in files:
+        pass
+    elif spec.get("web_note"):
         out += [f"Open in the browser: {web} ({spec['web_note']})", ""]
     else:
         out += [f"Open in the browser: {web}", ""]
@@ -127,6 +133,12 @@ def main() -> int:
     version = spec["version"]
     ch = spec["channel"]
     tag = spec["tag"]
+    labels = {"linux": "Linux", "windows": "Windows", "macos": "macOS", "web": "Browser"}
+    needs = json.loads(os.environ.get("NEEDS") or "{}")
+    spec["failed"] = [labels.get(k, k) for k, v in needs.items() if v.get("result") != "success"]
+    if os.environ.get("GITHUB_RUN_ID"):
+        spec["run_url"] = (f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/"
+                           f"{os.environ['GH_REPO']}/actions/runs/{os.environ['GITHUB_RUN_ID']}")
     latest = f"{ch}-latest"
 
     for f in sorted(assets.iterdir()):

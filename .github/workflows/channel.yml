@@ -165,10 +165,16 @@ jobs:
   publish:
     name: Publish
     needs: [linux, windows, macos, web]
+    # Publish what built: a platform that failed is named in the notes, not a reason to hold the
+    # others back.
+    if: >-
+      !cancelled() && (needs.linux.result == 'success' || needs.windows.result == 'success' ||
+      needs.macos.result == 'success' || needs.web.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
+      NEEDS: ${{ toJSON(needs) }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:

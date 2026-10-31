@@ -55,6 +55,9 @@ def channel_section(name: str, cfg: dict, info: dict | None, has_web: bool, repo
         if file in info.get("assets", []):
             parts.append(f'<a class="button" href="{latest}/{esc(file)}">{esc(label)}</a>')
     parts.append("</div>")
+    if info.get("failed"):
+        parts.append(f'<p class="note">Not in this build (it failed to build): {esc(", ".join(info["failed"]))}. '
+                     f'<a href="{esc(info.get("run_url", rel))}">Run log</a>.</p>')
     if cfg.get("web_note"):
         parts.append(f'<p class="note">{esc(cfg["web_note"])}</p>')
     base = info["base"]
