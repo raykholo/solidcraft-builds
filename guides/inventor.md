@@ -93,7 +93,7 @@ Cite paths and PRs, and separate confirmed behavior from gaps and proposals.
 
 ## Status and caveats
 
-PRs #10214, #10219, #10221, and #10224 are open drafts. PR #10216 is open and is not a draft.
+PR #10216 is merged into SolidCraft main (2026-10-31), so the channel gets it from main. PRs #10214, #10219, #10221, and #10224 are open drafts.
 These are unofficial preview builds, not SolidCraft releases.
 The channel's merge inputs can change, and skipped branches are listed in release notes.
 
