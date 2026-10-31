@@ -135,6 +135,9 @@ def main() -> int:
     tag = spec["tag"]
     labels = {"linux": "Linux", "windows": "Windows", "macos": "macOS", "web": "Browser"}
     needs = json.loads(os.environ.get("NEEDS") or "{}")
+    stray = [f.name for f in assets.iterdir() if version not in f.name]
+    if stray:
+        raise RuntimeError(f"files from another build in {assets}: {stray}")
     spec["failed"] = [labels.get(k, k) for k, v in needs.items() if v.get("result") != "success"]
     if os.environ.get("GITHUB_RUN_ID"):
         spec["run_url"] = (f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/"
