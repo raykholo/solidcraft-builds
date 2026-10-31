@@ -14,6 +14,13 @@ branches. **These are not SolidCraft releases.** For the official app, use the
 The browser version of `plugins` is SolidCraft without plugins: the plugin host runs only in the
 desktop builds.
 
+## Investigating the branches
+
+Read the [Plugins guide](https://raykholo.github.io/solidcraft-builds/plugins/guide/) or the
+[Inventor-familiar options guide](https://raykholo.github.io/solidcraft-builds/inventor/guide/)
+for changes, specs, code maps, source-build commands, and prompts for your assistant.
+The Markdown sources are [plugins.md](guides/plugins.md) and [inventor.md](guides/inventor.md).
+
 ## Downloads
 
 Each channel's `<channel>-latest` release always holds its newest build, under fixed names:

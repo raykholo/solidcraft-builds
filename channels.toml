@@ -9,9 +9,11 @@
 #   merge        [{ repo, branch, pr }]: branches merged on top, in order; pr is the pull request
 #                number in pr_repo, for the notes (optional)
 #   pr_repo      where the pr numbers live (default: tangency-labs/solidcraft)
+#   guide        Markdown guide rendered at /<channel>/guide/
 #   web_note     optional sentence shown next to the browser link
 
 [channels.inventor]
+guide = "guides/inventor.md"
 title = "Inventor-familiar options"
 summary = "SolidCraft main with the open pull requests for options that make the app feel familiar to Inventor users."
 base = { repo = "tangency-labs/solidcraft", branch = "main" }
@@ -25,6 +27,7 @@ merge = [
 ]
 
 [channels.plugins]
+guide = "guides/plugins.md"
 title = "Plugins"
 summary = "The plugins-dutchman branch: SolidCraft with a plugin host."
 base = { repo = "raykholo/solidcraft", branch = "plugins-dutchman" }

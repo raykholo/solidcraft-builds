@@ -12,6 +12,7 @@ from __future__ import annotations
 import html
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -44,6 +45,8 @@ def channel_section(name: str, cfg: dict, info: dict | None, has_web: bool, repo
     parts = [f'<section class="card" id="{esc(name)}">',
              f'<h2>{title} <span class="tag">{esc(name)}</span></h2>',
              f'<p class="summary">{esc(cfg.get("summary", ""))}</p>']
+    if cfg.get("guide"):
+        parts.append(f'<p><a href="./{esc(name)}/guide/">What&#39;s in this branch, and where the code is</a></p>')
     if not info:
         parts.append("<p>No build yet.</p></section>")
         return "\n".join(parts)
@@ -115,6 +118,13 @@ code {{ font: 13px ui-monospace, monospace; overflow-wrap: anywhere; }}
 .inputs li {{ margin: 3px 0; }}
 .ok {{ color: var(--ok); font-weight: 600; }}
 .skip {{ color: var(--skip); font-weight: 600; }}
+.guide h2 {{ margin-top: 28px; }}
+.guide h3 {{ margin-top: 18px; }}
+pre {{ overflow-x: auto; padding: 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }}
+pre code {{ overflow-wrap: normal; }}
+.table-scroll {{ overflow-x: auto; }}
+table {{ border-collapse: collapse; width: 100%; }}
+th, td {{ text-align: left; vertical-align: top; padding: 8px; border: 1px solid var(--line); }}
 footer {{ color: var(--muted); font-size: 13px; }}
 </style>
 </head>
@@ -131,6 +141,112 @@ Desktop builds are unsigned; each release's notes say how to open them.</footer>
 </body>
 </html>
 """
+
+
+def inline_markdown(source: str) -> str:
+    """Render the inline subset used by the guides, escaping ordinary text."""
+    pattern = r"`([^`]+)`|\[([^\]]+)\]\(([^\s)]+)\)"
+    parts = []
+    end = 0
+    for match in re.finditer(pattern, source):
+        parts.append(esc(source[end:match.start()]))
+        if match[1] is not None:
+            parts.append(f"<code>{esc(match[1])}</code>")
+        else:
+            parts.append(f'<a href="{esc(match[3])}">{esc(match[2])}</a>')
+        end = match.end()
+    parts.append(esc(source[end:]))
+    return "".join(parts)
+
+
+def minimal_markdown(source: str) -> str:
+    """Headings, paragraphs, flat lists, pipe tables, links, and fenced code."""
+    lines = source.splitlines()
+    parts = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if not line.strip():
+            i += 1
+            continue
+        if line.startswith("```"):
+            language = line[3:].strip()
+            i += 1
+            code = []
+            while i < len(lines) and not lines[i].startswith("```"):
+                code.append(lines[i])
+                i += 1
+            if i == len(lines):
+                raise ValueError("Unclosed Markdown code fence")
+            parts.append(f'<pre><code class="language-{esc(language)}">{esc(chr(10).join(code) + chr(10))}</code></pre>')
+            i += 1
+            continue
+        heading = re.match(r"^(#{1,6}) (.+)$", line)
+        if heading:
+            level = len(heading[1])
+            parts.append(f"<h{level}>{inline_markdown(heading[2])}</h{level}>")
+            i += 1
+            continue
+        if line.startswith("|") and i + 1 < len(lines) and re.fullmatch(r"[| :\-]+", lines[i + 1]):
+            cells = lambda row: [inline_markdown(c.strip()) for c in row.strip().strip("|").split("|")]
+            parts.append('<div class="table-scroll"><table><thead><tr>' + "".join(f"<th>{c}</th>" for c in cells(line)) + "</tr></thead><tbody>")
+            i += 2
+            while i < len(lines) and lines[i].startswith("|"):
+                parts.append("<tr>" + "".join(f"<td>{c}</td>" for c in cells(lines[i])) + "</tr>")
+                i += 1
+            parts.append("</tbody></table></div>")
+            continue
+        item = re.match(r"^(- |[0-9]+\. )(.+)$", line)
+        if item:
+            tag = "ul" if item[1] == "- " else "ol"
+            parts.append(f"<{tag}>")
+            while i < len(lines):
+                item = re.match(r"^(- |[0-9]+\. )(.+)$", lines[i])
+                if not item or (item[1] == "- ") != (tag == "ul"):
+                    break
+                parts.append(f"<li>{inline_markdown(item[2])}</li>")
+                i += 1
+            parts.append(f"</{tag}>")
+            continue
+        paragraph = [line]
+        i += 1
+        while i < len(lines) and lines[i].strip() and not re.match(r"^(#|```|\||- |[0-9]+\. )", lines[i]):
+            paragraph.append(lines[i])
+            i += 1
+        parts.append(f"<p>{inline_markdown(' '.join(paragraph))}</p>")
+    return "\n".join(parts)
+
+
+def render_markdown(source: str) -> str:
+    try:
+        import markdown
+    except ImportError:
+        return minimal_markdown(source)
+    return markdown.markdown(source, extensions=["tables", "fenced_code"])
+
+
+COPY_SCRIPT = """<script>
+document.querySelectorAll('[data-copy-prompt]').forEach(button => {
+  button.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(button.nextElementSibling.querySelector('code').textContent);
+      button.textContent = 'Copied';
+    } catch {
+      button.textContent = 'Select the prompt and copy';
+    }
+  });
+});
+</script>"""
+
+
+def guide_page(name: str, cfg: dict, repo: str, updated: str) -> str:
+    body = render_markdown((ROOT / cfg["guide"]).read_text())
+    body = body.replace('<pre><code class="language-prompt">',
+                        '<button class="button" type="button" data-copy-prompt aria-live="polite" aria-label="Copy assistant prompt">Copy</button>\n<pre><code class="language-prompt">')
+    section = '<p><a href="../../">All preview builds</a></p><article class="card guide">' + body + '</article>'
+    page = PAGE.format(sections=section, updated=updated, repo=esc(repo))
+    page = page.replace('<title>SolidCraft preview builds</title>', f'<title>{esc(cfg.get("title", name))} guide | SolidCraft preview builds</title>')
+    return page.replace('</body>', COPY_SCRIPT + '\n</body>')
 
 
 def main() -> int:
@@ -162,6 +278,11 @@ def main() -> int:
         sections.append(channel_section(name, cfg, info, has_web, repo))
     from datetime import datetime, timezone
     updated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    for name, cfg in config.items():
+        if cfg.get("guide"):
+            target = out / name / "guide"
+            target.mkdir(parents=True, exist_ok=True)
+            (target / "index.html").write_text(guide_page(name, cfg, repo, updated))
     (out / "index.html").write_text(PAGE.format(sections="\n".join(sections), updated=updated, repo=esc(repo)))
     (out / ".nojekyll").write_text("")
     return 0
