@@ -1,0 +1,196 @@
+# Build one channel (called by build.yml with the spec plan.py wrote) and publish it.
+# The build steps follow SolidCraft's own release workflow and packaging scripts
+# (.github/workflows/release.yml and packaging/ in tangency-labs/solidcraft), run from the
+# channel's source tree.
+name: Channel
+
+on:
+  workflow_call:
+    inputs:
+      spec:
+        description: "The channel's build spec (JSON from scripts/plan.py)"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CHANNEL: ${{ fromJSON(inputs.spec).channel }}
+  SOLIDCRAFT_VERSION: ${{ fromJSON(inputs.spec).version }}
+
+jobs:
+  # Remember that this set of inputs was tried, so a failing build isn't retried every
+  # half hour (plan.py checks for this cache entry; dispatch with force to retry).
+  mark:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ fromJSON(inputs.spec).tag }}" > attempt.txt
+      - uses: actions/cache/save@v4
+        with:
+          path: attempt.txt
+          key: attempt-${{ fromJSON(inputs.spec).channel }}-${{ fromJSON(inputs.spec).key }}
+
+  linux:
+    name: Linux x86_64
+    # The oldest GitHub-hosted image, so the binaries only need glibc >= 2.35 (as upstream).
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Source tree
+        env:
+          SPEC: ${{ inputs.spec }}
+        run: |
+          printf '%s' "$SPEC" > spec.json
+          python3 scripts/merge.py spec.json src
+          echo "SOLIDCRAFT_BUILD_DATE=$(date -u +%Y-%m-%d)" >> "$GITHUB_ENV"
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends desktop-file-utils
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src -> target
+          key: ${{ env.CHANNEL }}-linux-x86_64
+      - name: Build and package (AppImage, tar.gz)
+        run: src/packaging/linux/package.sh --formats "appimage tar"
+      - name: Check
+        run: |
+          tar -tzf src/dist/release/*.tar.gz | grep -E '/bin/solidcraft$'
+          for appimage in src/dist/release/*.AppImage; do
+            chmod +x "$appimage"
+            APPIMAGE_EXTRACT_AND_RUN=1 "$appimage" --version
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: out-linux
+          path: |
+            src/dist/release/*.AppImage
+            src/dist/release/*.tar.gz
+          if-no-files-found: error
+
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Source tree
+        shell: bash
+        env:
+          SPEC: ${{ inputs.spec }}
+        run: |
+          printf '%s' "$SPEC" > spec.json
+          python scripts/merge.py spec.json src
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src -> target
+          key: ${{ env.CHANNEL }}-windows-x64
+      - name: Install WiX
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          wix extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.Util.wixext/5.0.2
+      - name: Build and package (portable zip, plain exe)
+        shell: pwsh
+        run: ./src/packaging/windows/package.ps1 -Arch x64
+      # Only the portable zip and the plain exe: the MSI would install over an official SolidCraft.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: out-windows
+          path: |
+            src/dist/release/*-portable.zip
+            src/dist/release/*.exe
+          if-no-files-found: error
+
+  macos:
+    name: macOS Apple silicon
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Source tree
+        env:
+          SPEC: ${{ inputs.spec }}
+        run: |
+          printf '%s' "$SPEC" > spec.json
+          python3 scripts/merge.py spec.json src
+          echo "SOLIDCRAFT_BUILD_DATE=$(date -u +%Y-%m-%d)" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src -> target
+          key: ${{ env.CHANNEL }}-macos-aarch64
+      - name: Build and package (dmg, CLI zip; ad-hoc signed, not notarized)
+        run: src/packaging/macos/package.sh --arch aarch64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: out-macos
+          path: src/dist/release/*
+          if-no-files-found: error
+
+  web:
+    name: Web (wasm)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      TRUNK_VERSION: 0.21.14
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Source tree
+        env:
+          SPEC: ${{ inputs.spec }}
+        run: |
+          printf '%s' "$SPEC" > spec.json
+          python3 scripts/merge.py spec.json src
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src -> target
+          key: ${{ env.CHANNEL }}-web
+      - name: Install trunk
+        run: |
+          curl -fsSL "https://github.com/trunk-rs/trunk/releases/download/v${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz -C "$HOME/.cargo/bin" trunk
+      - name: Build and zip
+        run: src/packaging/web/package.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: out-web
+          path: src/dist/release/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    needs: [linux, windows, macos, web]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: out-*
+          path: assets
+          merge-multiple: true
+      - name: Release
+        env:
+          SPEC: ${{ inputs.spec }}
+        run: |
+          printf '%s' "$SPEC" > "$RUNNER_TEMP/spec.json"
+          ls -l assets
+          python3 scripts/publish.py "$RUNNER_TEMP/spec.json" assets

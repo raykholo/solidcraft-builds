@@ -1,0 +1,98 @@
+# Every half hour: rebuild each channel in channels.toml whose inputs changed (the base branch or
+# any merged branch moved), publish it as a release, and refresh the Pages site.
+#
+#   gh workflow run build.yml                          # check every channel
+#   gh workflow run build.yml -f channel=inventor -f force=true   # rebuild one now
+#   gh workflow run build.yml -f pages=true            # only refresh the Pages site
+name: Build
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Channel to check (all: every channel)"
+        type: string
+        default: all
+      force:
+        description: "Build even when the inputs are unchanged"
+        type: boolean
+        default: false
+      pages:
+        description: "Refresh the Pages site even when nothing was built"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# One run at a time; a newer pending run replaces an older pending one.
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      any: ${{ steps.plan.outputs.any }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CHANNEL: ${{ inputs.channel || 'all' }}
+          FORCE: ${{ inputs.force && '--force' || '' }}
+        run: python3 scripts/plan.py --channel "$CHANNEL" $FORCE
+
+  build:
+    name: ${{ matrix.channel }}
+    needs: plan
+    if: needs.plan.outputs.any == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/channel.yml
+    with:
+      spec: ${{ matrix.spec }}
+
+  pages:
+    needs: [plan, build]
+    if: >-
+      always() && needs.plan.result == 'success' &&
+      (needs.plan.outputs.any == 'true' || inputs.pages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Assemble the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 scripts/site.py site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
