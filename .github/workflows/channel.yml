@@ -100,7 +100,9 @@ jobs:
           wix extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.Util.wixext/5.0.2
       - name: Build and package (portable zip, plain exe)
         shell: pwsh
-        run: ./src/packaging/windows/package.ps1 -Arch x64
+        # The script runs cargo in the current directory: the source tree.
+        working-directory: src
+        run: ./packaging/windows/package.ps1 -Arch x64
       # Only the portable zip and the plain exe: the MSI would install over an official SolidCraft.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
