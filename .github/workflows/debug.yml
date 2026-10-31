@@ -1,0 +1,16 @@
+name: Debug
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - run: |
+          gh api repos/$GH_REPO/releases -f tag_name=dbg-a -f target_commitish=main -F prerelease=true || true
+          gh api repos/$GH_REPO/git/refs -f ref=refs/tags/dbg-b -f sha=$GITHUB_SHA || true
+          gh api repos/$GH_REPO/releases -f tag_name=dbg-c -F draft=true || true
+          gh api repos/$GH_REPO --jq .permissions || true
