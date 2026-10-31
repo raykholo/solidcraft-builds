@@ -164,8 +164,10 @@ def main() -> int:
     latest_notes = work / "notes-latest.md"
     latest_notes.write_text(notes(spec, files, latest))
 
+    # Tags point at this repository's main branch head: GITHUB_TOKEN may not tag an older commit
+    # that changed a workflow file.
     title = f"{spec['title']} preview {spec['built']}"
-    gh("release", "create", tag, "--prerelease", "--latest=false", "--target", os.environ.get("GITHUB_SHA", "main"),
+    gh("release", "create", tag, "--prerelease", "--latest=false", "--target", "main",
        "--title", title, "--notes-file", str(dated_notes), *upload)
     print(f"published {tag}")
 
@@ -179,7 +181,7 @@ def main() -> int:
         gh("release", "edit", latest, "--prerelease", "--latest=false", "--title", f"{spec['title']}: latest preview",
            "--notes-file", str(latest_notes))
     else:
-        gh("release", "create", latest, "--prerelease", "--latest=false", "--target", os.environ.get("GITHUB_SHA", "main"),
+        gh("release", "create", latest, "--prerelease", "--latest=false", "--target", "main",
            "--title", f"{spec['title']}: latest preview", "--notes-file", str(latest_notes), *upload)
     print(f"updated {latest}")
 
