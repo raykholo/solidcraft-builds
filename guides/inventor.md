@@ -83,7 +83,7 @@ trunk build --release --public-url ./
 ## For AI assistants
 
 ```prompt
-Investigate the inventor preview channel: tangency-labs/solidcraft main plus raykholo/solidcraft branches ribbon-tabs-only (PR #10214), sketch-face-owner (#10216), sketches-to-parts (#10219), web-keep-unsaved (#10221), and quick-access-bar (#10224).
+Investigate the inventor preview channel: tangency-labs/solidcraft main plus raykholo/solidcraft branches ribbon-tabs-only (PR #10214), web-keep-unsaved (#10221), and quick-access-bar (#10224).
 Start with each branch's docs/book/src/guide documentation: ui-tour.md, sketching.md, assemblies.md, and files.md. Then follow the code map at https://raykholo.github.io/solidcraft-builds/inventor/guide/.
 Compare each PR branch against upstream main and distinguish existing upstream options from additions. Check the preview release's actual merged inputs before attributing behavior to a build.
 Verify option defaults remain unchanged, quick access starts empty, sketch activation persists after success and restores on failure, moved sketches keep their placement, and browser recovery retains warnings when changes are not safely kept.
@@ -93,7 +93,7 @@ Cite paths and PRs, and separate confirmed behavior from gaps and proposals.
 
 ## Status and caveats
 
-PR #10216 is merged into SolidCraft main (2026-10-31), so the channel gets it from main. PRs #10214, #10219, #10221, and #10224 are open drafts.
+PRs #10216 and #10219 are merged into SolidCraft main (2026-10-31), so the channel gets them from main. PRs #10214, #10221, and #10224 are open for review.
 These are unofficial preview builds, not SolidCraft releases.
 The channel's merge inputs can change, and skipped branches are listed in release notes.
 

@@ -20,7 +20,6 @@ base = { repo = "tangency-labs/solidcraft", branch = "main" }
 pr_repo = "tangency-labs/solidcraft"
 merge = [
   { repo = "raykholo/solidcraft", branch = "ribbon-tabs-only", pr = 10214 },
-  { repo = "raykholo/solidcraft", branch = "sketches-to-parts", pr = 10219 },
   { repo = "raykholo/solidcraft", branch = "web-keep-unsaved", pr = 10221 },
   { repo = "raykholo/solidcraft", branch = "quick-access-bar", pr = 10224 },
 ]
