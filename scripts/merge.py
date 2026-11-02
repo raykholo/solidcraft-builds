@@ -51,6 +51,10 @@ def build_source(spec: dict, dest: Path, checkout: bool) -> dict:
     dest.mkdir(parents=True, exist_ok=True)
     git(dest, "init", "-q")
     git(dest, "config", "core.longpaths", "true")
+    # Two channel branches that both add a paragraph at the same place in a doc are not a real
+    # conflict: keep both. Code conflicts still leave the branch out.
+    (dest / ".git" / "info").mkdir(parents=True, exist_ok=True)
+    (dest / ".git" / "info" / "attributes").write_text("*.md merge=union\n")
     base = spec["base"]
     git(dest, "fetch", "-q", "--filter=blob:none", "--no-tags", f"https://github.com/{base['repo']}.git", base["sha"])
     head = base["sha"]
