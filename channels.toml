@@ -15,13 +15,10 @@
 [channels.inventor]
 guide = "guides/inventor.md"
 title = "Inventor-familiar options"
-summary = "SolidCraft main with the open pull requests for options that make the app feel familiar to Inventor users."
+summary = "SolidCraft main with defaults that make the app feel familiar to Inventor users (its option PRs are merged into SolidCraft)."
 base = { repo = "tangency-labs/solidcraft", branch = "main" }
 pr_repo = "tangency-labs/solidcraft"
 merge = [
-  { repo = "raykholo/solidcraft", branch = "ribbon-tabs-only", pr = 10214 },
-  { repo = "raykholo/solidcraft", branch = "web-keep-unsaved", pr = 10221 },
-  { repo = "raykholo/solidcraft", branch = "quick-access-bar", pr = 10224 },
   { repo = "raykholo/solidcraft", branch = "inventor-channel-defaults" },
 ]
 
