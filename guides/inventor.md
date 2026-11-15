@@ -2,8 +2,8 @@
 
 ## What this branch is
 
-The inventor channel combines SolidCraft upstream `main` with five separate PR branches from `raykholo/solidcraft`.
-It adds optional ribbon, sketch-ownership, browser-saving, and quick-access behavior for familiar CAD workflows.
+The inventor channel is SolidCraft upstream `main` plus one branch, `inventor-channel-defaults` in `raykholo/solidcraft`, which only changes defaults.
+The five option PRs below are all merged into SolidCraft main; the channel turns the Inventor-familiar choices on by default (a new install and Restore Defaults get them; every one is still a preference you can switch back).
 It uses SolidCraft's own commands, names, and interface conventions.
 Existing options already provide per-part history, sketches nested under features, a cube navigator, and part editing with other parts faded.
 Assembly constraints are planned work, not part of this channel.
@@ -16,9 +16,13 @@ Assembly constraints are planned work, not part of this channel.
 4. Added an opt-in browser-saving option to keep unsaved designs in private browser storage and offer them on a later visit. The leave-page warning remains when unsaved changes are not all kept ([PR #10221](https://github.com/tangency-labs/solidcraft/pull/10221), branch `web-keep-unsaved`, issue #10220).
 5. Added a quick-access bar after Save, Undo, and Redo, populated from ribbon buttons' right-click menus. It starts empty and hidden ([PR #10224](https://github.com/tangency-labs/solidcraft/pull/10224), branch `quick-access-bar`, issue #10223).
 
+## Defaults this channel changes (only on `inventor-channel-defaults`)
+
+Mouse mapping Inventor (right drag does not orbit); radial context menu on; SKETCH tab always shown; status bar on; ribbon panel menus as an icon grid; history inside the browser; sketches listed under their features; origin planes named Top, Front and Right; sketching on a part's face activates that part. The cube navigator is gone upstream (#17003), so the axes navigator stays.
+
 ## Where the code is
 
-There is no single inventor source branch. Each link targets the head of the PR branch named above.
+The five features are in SolidCraft main now; the links target the PR branches they came from.
 Start with its guide documentation, then read the corresponding implementation.
 
 | Area | Path(s) | What it does |
@@ -65,7 +69,7 @@ Use the [latest desktop release](https://github.com/raykholo/solidcraft-builds/r
 Check the release's Inputs list: a branch that fails to merge can be skipped.
 Enable the face-part option in Preferences > Sketch, try browser saving in Preferences > General > Saving, or pin a ribbon command to the application bar from its right-click menu.
 
-For source work, use upstream main plus the five PR branches listed above to reproduce the channel, or use one branch to investigate a change independently.
+For source work, merge `inventor-channel-defaults` into upstream main to reproduce the channel.
 The [build guide](https://github.com/raykholo/solidcraft/blob/ribbon-tabs-only/docs/building.md) gives these commands from a source checkout:
 
 ```sh
@@ -83,7 +87,7 @@ trunk build --release --public-url ./
 ## For AI assistants
 
 ```prompt
-Investigate the inventor preview channel: tangency-labs/solidcraft main plus raykholo/solidcraft branches ribbon-tabs-only (PR #10214), web-keep-unsaved (#10221), and quick-access-bar (#10224).
+Investigate the inventor preview channel: tangency-labs/solidcraft main plus the raykholo/solidcraft branch inventor-channel-defaults (changed defaults only; the features of PRs #10214, #10216, #10219, #10221 and #10224 are in main).
 Start with each branch's docs/book/src/guide documentation: ui-tour.md, sketching.md, assemblies.md, and files.md. Then follow the code map at https://raykholo.github.io/solidcraft-builds/inventor/guide/.
 Compare each PR branch against upstream main and distinguish existing upstream options from additions. Check the preview release's actual merged inputs before attributing behavior to a build.
 Verify option defaults remain unchanged, quick access starts empty, sketch activation persists after success and restores on failure, moved sketches keep their placement, and browser recovery retains warnings when changes are not safely kept.
@@ -93,7 +97,7 @@ Cite paths and PRs, and separate confirmed behavior from gaps and proposals.
 
 ## Status and caveats
 
-PRs #10216 and #10219 are merged into SolidCraft main (2026-10-31), so the channel gets them from main. PRs #10214, #10221, and #10224 are open for review.
+All five PRs (#10214, #10216, #10219, #10221, #10224) are merged into SolidCraft main (2026-10-31 to 2026-11-05), so the channel gets them from main. The branch merged on top carries only the changed defaults listed above.
 These are unofficial preview builds, not SolidCraft releases.
 The channel's merge inputs can change, and skipped branches are listed in release notes.
 
